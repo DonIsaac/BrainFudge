@@ -39,6 +39,7 @@ test/main.o: test/main.c lib/file.h test/unit.h test/types.h interp.h
 # ==============================================================================
 
 clean:
-	rm -f bin/interp *.o *.test progs/*.test
+	rm -f bin/* $$(find . -name '*.o' -or -name '*.test')
+
 bin:
 	mkdir -p bin
