@@ -7,46 +7,118 @@
 
 #include "interp.h"
 
+#ifdef DEBUG
+#include "lib/err.h"
+#endif
+
+
 // Get location of address in memory tape
 #define ADDR(X) (X - memory)
 // Get location of instruction character in program string
 #define INSTR(X) (X - program)
 
-int interpret(char *program)
+
+
+/* ==========================================================================
+   ================================ FUNCTIONS ===============================
+   ========================================================================== */
+
+int bf_exec(char *memory, int memory_size);
+
+/**
+ * Throws a runtime error. `msg` is formatted and printed to `stderr`.
+ *
+ * @param msg the error message to print
+ * @returns   `BF_ERR_RUNTIME`
+ */
+int bf_err_runtime(char *msg);
+
+/**
+ * Throws a syntax error. `msg` is formatted and printed to `stderr`.
+ *
+ * @param msg the error message to print
+ * @returns   `BF_ERR_SYNTAX`
+ */
+int bf_err_syntax(char *msg);
+
+
+
+/* ==========================================================================
+   ================================ REGISTERS ===============================
+   ========================================================================== */
+
+// data pointer, program counter, and a GP register, respectively
+char *di, *pc, *ax;
+
+/**
+ * A string containing the Brainfuck program's source code
+ */
+char *program = NULL;
+
+
+
+/* ==========================================================================
+   ============================= IMPLEMENTATIONS ============================
+   ========================================================================== */
+
+int interpret(char *source)
 {
-    // memory tape
+    // memory tape that the program reads/writes from.
     char memory[MEMORY_TAPE_SIZE] = {0};
+    int status;
 
-    char *di = memory,  // data pointer
-        *pc = program,  // program counter
-            *ax = NULL; // general purpose pointer
-
-    unsigned int depth = 0, i;
-    /*     for (i = 0; i < MEMORY_TAPE_SIZE; i++)
+    // Check if program is NULL
+    if (!source)
     {
-        memory[i] = '\0';
-    } */
+        return 1;
+    }
+
+    // Initialize registers before executing the program
+    program = source;
+    di = memory;
+    pc = program;
+    ax = NULL;
+
+    // Execute the program
+    status = bf_exec(memory, MEMORY_TAPE_SIZE);
+
+    di = pc = ax = program = NULL;
+
+    return status;
+}
+
+int bf_exec(char *memory, int memory_size)
+{
+    unsigned int depth = 0, i;
+
+#ifdef DEBUG
+    if (!pc)
+    {
+        bf_err("Pointer counter is NULL. Aborting.");
+        return 1;
+    }
+#endif
 
     while (*pc != '\0')
     {
-        if (DEBUG)
-        {
-            printf("Executing '%c' at %ld.\n", *pc, INSTR(pc));
-        }
+#ifdef DEBUG
+        printf("Executing '%c' at %ld.\n", *pc, INSTR(pc));
+#endif
+
         switch (*pc)
         {
         // Increment data pointer
         case '>':
             if (di == ((unsigned long int)memory) + MEMORY_TAPE_SIZE)
             {
-                fprintf(stderr, "Runtime Error ('%c':%ld): Tape memory exceeded.\n", *pc, INSTR(pc));
-                return 1;
+                return bf_err_runtime("Tape memory exceeded.");
             }
             else
             {
                 ++di;
-                if (DEBUG)
-                    printf("Data pointer now points to: %ld.\n", ADDR(di));
+#ifdef DEBUG
+                printf("Data pointer now points to: %ld.\n", ADDR(di));
+#endif
             }
             break;
 
@@ -54,14 +126,14 @@ int interpret(char *program)
         case '<':
             if (di == memory)
             {
-                fprintf(stderr, "Runtime Error ('%c':%ld): Cannot decrement data pointer before start of memory.\n", *pc, INSTR(pc));
-                return 1;
+                return bf_err_runtime("Cannot decrement data pointer below the start of the memory tape.");
             }
             else
             {
                 --di;
-                if (DEBUG)
-                    printf("Data pointer now points to: %ld.\n", ADDR(di));
+#ifdef DEBUG
+                printf("Data pointer now points to: %ld.\n", ADDR(di));
+#endif
             }
             break;
 
@@ -102,10 +174,9 @@ int interpret(char *program)
                 // while matching brace hasn't been found, increment pc
                 while (*pc != ']' || depth != 0)
                 {
-                    if (DEBUG)
-                    {
-                        printf("In '[' loop. pc: %ld, instr: '%c', depth: %d.\n", INSTR(pc), *pc, depth);
-                    }
+#ifdef DEBUG
+                    printf("In '[' loop. pc: %ld, instr: '%c', depth: %d.\n", INSTR(pc), *pc, depth);
+#endif
 
                     switch (*pc)
                     {
@@ -116,8 +187,7 @@ int interpret(char *program)
                         --depth;
                         break;
                     case '\0':
-                        fprintf(stderr, "Syntax error ('%c':%ld): expected closing ']', got EOF.\n", *pc, INSTR(ax));
-                        return 1;
+                        return bf_err_syntax("Expected closing ']', got EOF.");
                     }
 
                     ++pc;
@@ -140,10 +210,9 @@ int interpret(char *program)
                 while (*pc != '[' || depth != 0)
                 {
 
-                    if (DEBUG)
-                    {
-                        printf("In ']' loop. pc: %ld, instr: '%c', depth: %d.\n", INSTR(pc), *pc, depth);
-                    }
+#ifdef DEBUG
+                    printf("In ']' loop. pc: %ld, instr: '%c', depth: %d.\n", INSTR(pc), *pc, depth);
+#endif
 
                     switch (*pc)
                     {
@@ -158,8 +227,7 @@ int interpret(char *program)
                     // program counter has decremented past the beginning of the program
                     if (pc == memory)
                     {
-                        fprintf(stderr, "Syntax error ('%c':%ld): no matching '[' instruction.\n", *pc, INSTR(ax));
-                        return 1;
+                        return bf_err_syntax("No matching '[' instruction.");
                     }
                     else
                     {
@@ -183,82 +251,23 @@ int interpret(char *program)
 
         ++pc;
     }
-
     return 0;
 }
 
-int bf_exec(char *program, char *memory, int memory_size)
+int bf_err_runtime(char *msg)
 {
-    return 0;
+    fprintf(stderr, "Runtime Error ('%c':%ld): %s\n", msg, *pc, INSTR(pc));
+#if DEBUG
+    bf_print_trace();
+#endif
+    return 1;
 }
 
-/*
-int main(int argc, char **argv)
+int bf_err_syntax(char *msg)
 {
-    FILE *program_file = NULL;
-    char *program = NULL;
-    unsigned long program_length = 0L;
-    struct stat st;
-    int status, i;
-
-    if (argc <= 1)
-    {
-        fprintf(stderr, "No program provided.");
-        return 1;
-    }
-
-    // Program passed via command line arguments
-    if (!strcmp(argv[1], "-e") || !strcmp(argv[1], "--eval"))
-    {
-        if (argc < 3)
-        {
-            fprintf(stderr, "No program provided. Aborting.");
-            return 1;
-        }
-
-        program = argv[2];
-        status = interpret(program);
-        return status;
-    }
-
-    // Get the size of the program while simultaneously checking the source file
-    if ((status = stat(argv[1], &st)))
-    {
-        fprintf(stderr, "Could not read file %s: stat exited with code %d.", argv[1], status);
-        exit(status);
-    }
-
-    if (!(st.st_mode & R_OK))
-    {
-        fprintf(stderr, "Unable to read file %s: file is unreadable. Check your read permissions.", argv[1]);
-        return 1;
-    }
-    program_length = st.st_size;
-
-    // Allocate memory for program
-    if (NULL == (program = malloc(program_length + 2)))
-    {
-        fprintf(stderr, "Could not allocate memory for program source code.");
-        return 1;
-    }
-
-    // Load in program from source file
-    program_file = fopen(argv[1], "r");
-    if (!program_file)
-    {
-        fprintf(stderr, "Could not open file %s.", argv[1]);
-        return 1;
-    }
-    for (i = 0; !feof(program_file); i++)
-    {
-        program[i] = fgetc(program_file);
-    }
-    program[i] = '\0'; // Add null termination to program string
-    fclose(program_file);
-
-    // Execute program
-    status = interpret(program);
-    free(program);
-    return status;
+    fprintf(stderr, "Syntax error ('%c':%ld): %s\n", msg, *pc, INSTR(ax));
+#if DEBUG
+    bf_print_trace();
+#endif
+    return 1;
 }
-*/
