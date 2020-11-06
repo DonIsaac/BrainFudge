@@ -3,6 +3,11 @@
 
 #include "types.h"
 
+
+#ifdef DEBUG
+#include "lib/err.h"
+#endif
+
 /**
  * Error code for a syntax error.
  */

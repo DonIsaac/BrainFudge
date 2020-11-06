@@ -5,6 +5,28 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Interp: Debug CLI Program",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/interp",
+            "args": [
+                "-e",
+                "++>+++++[<+>-]++++++++[<++++++>-]<."
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
             "name": "Debug Tests (GDB)",
             "type": "cppdbg",
             "request": "launch",

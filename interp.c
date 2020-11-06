@@ -7,10 +7,6 @@
 
 #include "interp.h"
 
-#ifdef DEBUG
-#include "lib/err.h"
-#endif
-
 
 // Get location of address in memory tape
 #define ADDR(X) (X - memory)
