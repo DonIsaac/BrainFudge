@@ -36,13 +36,27 @@
             }
         },
         {
-            "label": "clean",
+            "label": "Clean",
             "type": "shell",
             "command": "make",
             "args": [
                 "clean"
             ],
             "group": "none"
+        },
+        {
+            "label": "gcc build active file",
+            "type": "shell",
+            "command": "gcc",
+            "args": [
+                "-g",
+                "${file}",
+                "-o",
+                "${workspaceFolder}/tmp/${fileBasenameNoExtension}.exe",
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            }
         }
     ]
 }

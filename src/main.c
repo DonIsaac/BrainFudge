@@ -4,7 +4,7 @@
 #include <unistd.h>
 
 #include "interp.h"
-#include "lib/err.h"
+#include "../lib/err.h"
 
 int main(int argc, char **argv)
 {

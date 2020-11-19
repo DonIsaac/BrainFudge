@@ -10,7 +10,7 @@
 #include <sys/unistd.h>
 
 #include "../lib/file.h"
-#include "../interp.h"
+#include "../src/interp.h"
 #include "types.h"
 #include "unit.h"
 

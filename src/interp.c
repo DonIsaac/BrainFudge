@@ -7,13 +7,10 @@
 
 #include "interp.h"
 
-
 // Get location of address in memory tape
 #define ADDR(X) (X - memory)
 // Get location of instruction character in program string
 #define INSTR(X) (X - program)
-
-
 
 /* ==========================================================================
    ================================ FUNCTIONS ===============================
@@ -37,27 +34,60 @@ int bf_err_runtime(char *msg);
  */
 int bf_err_syntax(char *msg);
 
+/**
+ * Increments the program counter, updating the line/column number accordingly.
+ */
+void pc_next();
 
+/**
+ * Decrements the program counter, updating the line/column number accordingly.
+ */
+void pc_prev();
 
 /* ==========================================================================
-   ================================ REGISTERS ===============================
+   ================================= GLOBALS ================================
    ========================================================================== */
 
-// data pointer, program counter, and a GP register, respectively
-char *di, *pc, *ax;
+/**
+ * Data pointer (or read/write head) of the interpreter. This points to a cell
+ * on the memory tape, the value of which is the target for `+` and `-`
+ * instructions.
+ */
+char *di;
+
+/**
+ * Program counter. Points to the currently executing instruction in the program.
+ * Modifyable with '[' and ']' instructions.
+ */
+char *pc;
+
+/**
+ * General purpose register. Used for storing temporary values.
+ */
+char *ax;
 
 /**
  * A string containing the Brainfuck program's source code
  */
-char *program = NULL;
+const char *program = NULL;
 
+/**
+ * Line number of the currently executing instruction.
+ */
+int lineno;
+int lineno2; // lineno backup
 
+/**
+ * Column number of the currently executing instruction.
+ */
+int colno;
+int colno2; // colno backup
 
 /* ==========================================================================
    ============================= IMPLEMENTATIONS ============================
    ========================================================================== */
 
-int interpret(char *source)
+int interpret(const char *source)
 {
     // memory tape that the program reads/writes from.
     char memory[MEMORY_TAPE_SIZE] = {0};
@@ -74,11 +104,14 @@ int interpret(char *source)
     di = memory;
     pc = program;
     ax = NULL;
+    lineno = lineno2 = colno = colno2 = 0;
 
     // Execute the program
     status = bf_exec(memory, MEMORY_TAPE_SIZE);
 
+    // Clean up. Not sure if this is needed, but it's here just in case.
     di = pc = ax = program = NULL;
+    lineno = lineno2 = colno = colno2 = 0;
 
     return status;
 }
@@ -159,8 +192,10 @@ int bf_exec(char *memory, int memory_size)
             if (!(*di))
             {
                 depth = 0;
-                ax = pc;
-                ++pc;
+                ax = pc,
+                lineno2 = lineno,
+                colno2 = colno;
+                pc_next();
 
                 // [ + [ - ] + ]
                 //             ^
@@ -186,7 +221,7 @@ int bf_exec(char *memory, int memory_size)
                         return bf_err_syntax("Expected closing ']', got EOF.");
                     }
 
-                    ++pc;
+                    pc_next();
                 }
 
                 // pc++;
@@ -200,8 +235,11 @@ int bf_exec(char *memory, int memory_size)
             {
                 depth = 0;
                 // store the start of the loop for error output
-                ax = pc;
-                pc--;
+                ax = pc,
+                lineno2 = lineno,
+                colno2 = colno;
+
+                pc_prev();
 
                 while (*pc != '[' || depth != 0)
                 {
@@ -227,7 +265,7 @@ int bf_exec(char *memory, int memory_size)
                     }
                     else
                     {
-                        --pc;
+                        pc_prev();
                     }
                 }
 
@@ -237,33 +275,71 @@ int bf_exec(char *memory, int memory_size)
             break;
 
         default:
-            // if (isspace(*pc))
-            // break;
-
-            // fprintf(stderr, "Syntax error ('%c':%ld): invalid instruction '%c'.\n", *pc, INSTR(pc), *pc);
-            // return 1;
+            // NOOP
             break;
         } // !switch
 
-        ++pc;
+        pc_next();
     }
     return 0;
 }
 
+void pc_next()
+{
+    if (*pc == '\n')
+    {
+        colno = 0;
+        lineno++;
+    }
+    else
+    {
+        colno++;
+    }
+
+    pc++;
+}
+
+void pc_prev()
+{
+    char *tmp;
+    int len;
+
+    // I think this needs to be before the lineno/colno update?
+    pc--;
+    if (*pc == '\n')
+    {
+        len = 0;
+        tmp = pc - 1;
+
+        while (*tmp != '\n' && tmp > program)
+        {
+            len++;
+            tmp--;
+        }
+
+        colno = tmp;
+        lineno--;
+    }
+    else
+    {
+        colno--;
+    }
+}
+
 int bf_err_runtime(char *msg)
 {
-    fprintf(stderr, "Runtime Error ('%c':%ld): %s\n", msg, *pc, INSTR(pc));
+    fprintf(stderr, "Runtime Error ('%c', %ld:%ld): %s\n", *pc, lineno, colno, msg);
 #if DEBUG
     bf_print_trace();
 #endif
-    return 1;
+    return BF_ERR_RUNTIME;
 }
 
 int bf_err_syntax(char *msg)
 {
-    fprintf(stderr, "Syntax error ('%c':%ld): %s\n", msg, *pc, INSTR(ax));
+    fprintf(stderr, "Syntax error ('%c', %ld:%ld): %s\n", *ax, lineno2, colno2, msg);
 #if DEBUG
     bf_print_trace();
 #endif
-    return 1;
+    return BF_ERR_SYNTAX;
 }

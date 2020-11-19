@@ -24,7 +24,8 @@
                     "text": "-enable-pretty-printing",
                     "ignoreFailures": true
                 }
-            ]
+            ],
+            "preLaunchTask": "Build (Debug)"
         },
         {
             "name": "Debug Tests (GDB)",
@@ -43,14 +44,17 @@
                     "text": "-enable-pretty-printing",
                     "ignoreFailures": true
                 }
-            ]
+            ],
+            "preLaunchTask": "Build (Debug)"
         },
         {
             "name": "Debug Interpreter (GDB)",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/bin/interp",
-            "args": ["${workspaceFolder}/progs/hello_world.bf"],
+            "args": [
+                "${workspaceFolder}/progs/hello_world.bf"
+            ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
@@ -63,6 +67,27 @@
                     "ignoreFailures": true
                 }
             ]
+        },
+        {
+            "name": "Build and debug active file",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/tmp/${fileBasenameNoExtension}.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false, //set to true to see output in cmd instead
+            "MIMode": "gdb",
+            // "miDebuggerPath": "C:\\MinGW64\\bin\\gdb.exe",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "gcc build active file"
         }
     ]
 }

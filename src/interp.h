@@ -5,7 +5,7 @@
 
 
 #ifdef DEBUG
-#include "lib/err.h"
+#include "../lib/err.h"
 #endif
 
 /**
@@ -35,6 +35,6 @@
  *                in 0, 1 if `program` is `NULL`, or an error code if an error
  *                occurs during execution.
  */
-int interpret(char *program);
+int interpret(const char *program);
 
 #endif
